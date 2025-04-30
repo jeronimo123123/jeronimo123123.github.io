@@ -71,8 +71,8 @@
   </iframe>
 
   <script>
-    const home = { lat: 52.8312, lng: -1.3287 };
-    const KM_RADIUS = 1; // Hide true location within 1km
+    const home = { lat: 52.8412289, lng: -1.3407503 };
+    const KM_RADIUS = 1;
 
     let map, marker, myLocation;
 
@@ -94,7 +94,7 @@
     function applyPrivacyMask(lat, lng) {
       const distance = distanceInKm(lat, lng, home.lat, home.lng);
       if (distance <= KM_RADIUS) {
-        const offset = 0.01 * (Math.random() - 0.5); // ~500m radius
+        const offset = 0.01 * (Math.random() - 0.5); // ~500m
         return {
           lat: lat + offset,
           lng: lng + offset
