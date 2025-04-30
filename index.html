@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Live Location Tracker</title>
+  <style>
+    html, body {
+      margin: 0;
+      height: 100%;
+      background-color: #000;
+      color: #fff;
+      font-family: Arial, sans-serif;
+    }
+    #map {
+      width: 100%;
+      height: 80vh;
+    }
+    #info {
+      padding: 15px;
+      font-size: 1rem;
+      background: #111;
+      text-align: center;
+    }
+    .label {
+      color: #aaa;
+    }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+  <div id="info">
+    <p><span class="label">Latitude:</span> <span id="lat">–</span></p>
+    <p><span class="label">Longitude:</span> <span id="lng">–</span></p>
+    <p><span class="label">Speed:</span> <span id="speed">–</span></p>
+    <p><span class="label">Heading:</span> <span id="heading">–</span></p>
+    <p><span class="label">Altitude:</span> <span id="alt">–</span></p>
+  </div>
+
+  <script>
+    let map, marker;
+
+    function initMap() {
+      if (navigator.geolocation) {
+        navigator.geolocation.watchPosition(updatePosition, showError, {
+          enableHighAccuracy: true,
+          timeout: 10000
+        });
+      } else {
+        alert("Geolocation is not supported by your browser.");
+      }
+    }
+
+    function updatePosition(position) {
+      const lat = position.coords.latitude;
+      const lng = position.coords.longitude;
+      const speed = position.coords.speed;
+      const heading = position.coords.heading;
+      const alt = position.coords.altitude;
+
+      document.getElementById("lat").textContent = lat.toFixed(6);
+      document.getElementById("lng").textContent = lng.toFixed(6);
+      document.getElementById("speed").textContent = speed ? speed.toFixed(1) + " m/s" : "–";
+      document.getElementById("heading").textContent = heading ? heading.toFixed(1) + "°" : "–";
+      document.getElementById("alt").textContent = alt ? alt.toFixed(1) + " m" : "–";
+
+      const myLocation = { lat: lat, lng: lng };
+
+      if (!map) {
+        map = new google.maps.Map(document.getElementById("map"), {
+          center: myLocation,
+          zoom: 16
+        });
+
+        marker = new google.maps.Marker({
+          position: myLocation,
+          map: map,
+          title: "You are here"
+        });
+      } else {
+        map.setCenter(myLocation);
+        marker.setPosition(myLocation);
+      }
+    }
+
+    function showError(error) {
+      document.getElementById("map").innerHTML = "⚠️ Error: " + error.message;
+    }
+  </script>
+
+  <script async
+    src="https://maps.googleapis.com/maps/api/js?key=AIzaSyC1BLMNigTLDbiUqq-McVmLRD5cdwd2fiM&callback=initMap">
+  </script>
+</body>
+</html>
