@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Flight Ops Tracker</title>
+  <title>Flight Tracker – Privacy Protected</title>
   <style>
     html, body {
       margin: 0;
@@ -71,7 +71,37 @@
   </iframe>
 
   <script>
+    const home = { lat: 52.8312, lng: -1.3287 };
+    const KM_RADIUS = 1; // Hide true location within 1km
+
     let map, marker, myLocation;
+
+    function toRadians(deg) {
+      return deg * Math.PI / 180;
+    }
+
+    function distanceInKm(lat1, lng1, lat2, lng2) {
+      const R = 6371;
+      const dLat = toRadians(lat2 - lat1);
+      const dLng = toRadians(lng2 - lng1);
+      const a = Math.sin(dLat / 2) ** 2 +
+                Math.cos(toRadians(lat1)) * Math.cos(toRadians(lat2)) *
+                Math.sin(dLng / 2) ** 2;
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      return R * c;
+    }
+
+    function applyPrivacyMask(lat, lng) {
+      const distance = distanceInKm(lat, lng, home.lat, home.lng);
+      if (distance <= KM_RADIUS) {
+        const offset = 0.01 * (Math.random() - 0.5); // ~500m radius
+        return {
+          lat: lat + offset,
+          lng: lng + offset
+        };
+      }
+      return { lat, lng };
+    }
 
     function initMap() {
       if (navigator.geolocation) {
@@ -92,10 +122,12 @@
 
     function updatePosition(position) {
       const { latitude, longitude, speed, heading, altitude } = position.coords;
-      myLocation = { lat: latitude, lng: longitude };
+      const masked = applyPrivacyMask(latitude, longitude);
 
-      document.getElementById("lat").textContent = latitude.toFixed(6);
-      document.getElementById("lng").textContent = longitude.toFixed(6);
+      myLocation = { lat: masked.lat, lng: masked.lng };
+
+      document.getElementById("lat").textContent = masked.lat.toFixed(6);
+      document.getElementById("lng").textContent = masked.lng.toFixed(6);
       document.getElementById("speed").textContent = speed ? speed.toFixed(1) + " m/s" : "–";
       document.getElementById("heading").textContent = heading ? heading.toFixed(1) + "°" : "–";
       document.getElementById("alt").textContent = altitude ? altitude.toFixed(1) + " m" : "–";
@@ -111,7 +143,7 @@
         marker = new google.maps.Marker({
           position: myLocation,
           map: map,
-          title: "You are here"
+          title: "Tracking"
         });
       } else {
         marker.setPosition(myLocation);
