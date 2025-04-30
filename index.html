@@ -3,42 +3,75 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Live Location Tracker</title>
+  <title>Flight Ops Tracker</title>
   <style>
     html, body {
       margin: 0;
-      height: 100%;
-      background-color: #000;
-      color: #fff;
       font-family: Arial, sans-serif;
+      background: #000;
+      color: #fff;
     }
+
     #map {
+      height: 70vh;
       width: 100%;
-      height: 80vh;
     }
+
     #info {
-      padding: 15px;
-      font-size: 1rem;
-      background: #111;
       text-align: center;
+      padding: 10px;
+      background: #111;
     }
-    .label {
-      color: #aaa;
+
+    .label { color: #aaa; }
+
+    #recenter {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      z-index: 5;
+      padding: 10px 15px;
+      background: #444;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    iframe {
+      width: 100%;
+      height: 400px;
+      border: none;
+      margin-top: 10px;
+    }
+
+    .last-updated {
+      margin-top: 10px;
+      font-size: 0.9em;
+      color: #888;
     }
   </style>
 </head>
 <body>
   <div id="map"></div>
+  <button id="recenter">Track Me Again</button>
+
   <div id="info">
     <p><span class="label">Latitude:</span> <span id="lat">–</span></p>
     <p><span class="label">Longitude:</span> <span id="lng">–</span></p>
     <p><span class="label">Speed:</span> <span id="speed">–</span></p>
     <p><span class="label">Heading:</span> <span id="heading">–</span></p>
     <p><span class="label">Altitude:</span> <span id="alt">–</span></p>
+    <p class="last-updated">Last updated: <span id="updated">–</span></p>
   </div>
 
+  <iframe
+    src="https://embed.windy.com/embed.html?lat=52.83&lon=-1.33&detailLat=52.83&detailLon=-1.33&width=650&height=450&zoom=6&level=surface&overlay=wind&product=ecmwf&menu=&message=true&marker=&calendar=now&pressure=true&type=map&location=coordinates&detail=true&metricWind=kt&metricTemp=%C2%B0C&radarRange=-1"
+    loading="lazy">
+  </iframe>
+
   <script>
-    let map, marker;
+    let map, marker, myLocation;
 
     function initMap() {
       if (navigator.geolocation) {
@@ -47,44 +80,46 @@
           timeout: 10000
         });
       } else {
-        alert("Geolocation is not supported by your browser.");
+        alert("Geolocation not supported.");
       }
+
+      document.getElementById("recenter").addEventListener("click", () => {
+        if (map && myLocation) {
+          map.setCenter(myLocation);
+        }
+      });
     }
 
     function updatePosition(position) {
-      const lat = position.coords.latitude;
-      const lng = position.coords.longitude;
-      const speed = position.coords.speed;
-      const heading = position.coords.heading;
-      const alt = position.coords.altitude;
+      const { latitude, longitude, speed, heading, altitude } = position.coords;
+      myLocation = { lat: latitude, lng: longitude };
 
-      document.getElementById("lat").textContent = lat.toFixed(6);
-      document.getElementById("lng").textContent = lng.toFixed(6);
+      document.getElementById("lat").textContent = latitude.toFixed(6);
+      document.getElementById("lng").textContent = longitude.toFixed(6);
       document.getElementById("speed").textContent = speed ? speed.toFixed(1) + " m/s" : "–";
       document.getElementById("heading").textContent = heading ? heading.toFixed(1) + "°" : "–";
-      document.getElementById("alt").textContent = alt ? alt.toFixed(1) + " m" : "–";
+      document.getElementById("alt").textContent = altitude ? altitude.toFixed(1) + " m" : "–";
 
-      const myLocation = { lat: lat, lng: lng };
+      const now = new Date();
+      document.getElementById("updated").textContent = now.toLocaleTimeString();
 
       if (!map) {
         map = new google.maps.Map(document.getElementById("map"), {
           center: myLocation,
-          zoom: 16
+          zoom: 15
         });
-
         marker = new google.maps.Marker({
           position: myLocation,
           map: map,
           title: "You are here"
         });
       } else {
-        map.setCenter(myLocation);
         marker.setPosition(myLocation);
       }
     }
 
     function showError(error) {
-      document.getElementById("map").innerHTML = "⚠️ Error: " + error.message;
+      document.getElementById("map").innerHTML = "⚠️ " + error.message;
     }
   </script>
 
