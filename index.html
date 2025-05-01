@@ -11,6 +11,53 @@
       background: #000;
       color: #fff;
     }
+    #loginScreen {
+      position: fixed;
+      inset: 0;
+      background: #000;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+    }
+    #loginBox {
+      text-align: center;
+      max-width: 300px;
+      width: 80%;
+    }
+    #loginBox h2 {
+      margin-bottom: 20px;
+      font-size: 1.5em;
+    }
+    #passwordInput {
+      padding: 10px;
+      font-size: 1em;
+      width: 100%;
+      border: none;
+      border-radius: 5px;
+      background: #111;
+      color: #fff;
+      text-align: center;
+      margin-bottom: 10px;
+    }
+    #accessButton {
+      padding: 10px;
+      width: 100%;
+      background: #007bff;
+      border: none;
+      border-radius: 5px;
+      color: #fff;
+      font-weight: bold;
+      font-size: 1em;
+      cursor: pointer;
+    }
+    #errorMsg {
+      margin-top: 10px;
+      color: #f33;
+      font-size: 0.9em;
+      display: none;
+    }
     #map { height: 70vh; width: 100%; }
     #info {
       text-align: center;
@@ -50,12 +97,27 @@
   </style>
 </head>
 <body>
-
+<div id="loginScreen">
+  <div id="loginBox">
+    <h2>Jerome’s Live Tracker</h2>
+    <input type="password" id="passwordInput" placeholder="Enter password" />
+    <button id="accessButton">Access</button>
+    <div id="errorMsg">Access denied. Try again.</div>
+  </div>
+</div>
 <script>
-  const password = prompt("Enter password to access the tracker:");
-  if (password !== "bonjour") {
-    document.body.innerHTML = "<h2 style='text-align:center;margin-top:20vh;'>Access denied</h2>";
-  } else {
+  const correctPassword = "bonjour";
+  document.getElementById("accessButton").addEventListener("click", () => {
+    const entered = document.getElementById("passwordInput").value;
+    if (entered === correctPassword) {
+      document.getElementById("loginScreen").style.display = "none";
+      loadTracker();
+    } else {
+      document.getElementById("errorMsg").style.display = "block";
+    }
+  });
+
+  function loadTracker() {
     document.body.innerHTML += `
       <div id="map"></div>
       <button id="recenter">Track Me Again</button>
@@ -71,24 +133,29 @@
         Refer to my Roster section. You’ll be able to get the flight link via 24Flightradar.
       </div>
       <iframe
-        src="https://embed.windy.com/embed.html?lat=52.83&lon=-1.33&detailLat=52.83&detailLon=-1.33&width=650&height=450&zoom=6&level=surface&overlay=wind&product=ecmwf&menu=&message=true&marker=&calendar=now&pressure=true&type=map&location=coordinates&detail=true&metricWind=kt&metricTemp=%C2%B0C&radarRange=-1"
+        src="https://embed.windy.com/embed.html?lat=52.83&lon=-1.33&detailLat=52.83&detailLon=-1.33&zoom=6&level=surface&overlay=wind&product=ecmwf"
         loading="lazy">
       </iframe>
     `;
 
-    const script = document.createElement('script');
+    const script = document.createElement("script");
     script.src = "https://maps.googleapis.com/maps/api/js?key=AIzaSyC1BLMNigTLDbiUqq-McVmLRD5cdwd2fiM&callback=initMap";
     script.async = true;
     document.body.appendChild(script);
   }
 </script>
-
 <script>
   const home = { lat: 52.8412289, lng: -1.3407503 };
   const KM_RADIUS = 1;
   let map, marker, myLocation, trailPath;
   let trailCoords = [];
   let autoFollow = true;
+
+  const icons = {
+    walk: "https://cdn-icons-png.flaticon.com/512/747/747376.png",
+    car: "https://cdn-icons-png.flaticon.com/512/743/743007.png",
+    plane: "https://cdn-icons-png.flaticon.com/512/3487/3487175.png"
+  };
 
   function toRad(deg) { return deg * Math.PI / 180; }
 
@@ -121,9 +188,14 @@
 
   function isNight(sunrise, sunset) {
     const now = new Date();
-    const sr = new Date(sunrise);
-    const ss = new Date(sunset);
-    return now < sr || now > ss;
+    return now < new Date(sunrise) || now > new Date(sunset);
+  }
+
+  function getIconUrl(speedMps) {
+    const mph = speedMps * 2.237;
+    if (mph > 90) return icons.plane;
+    if (mph >= 10) return icons.car;
+    return icons.walk;
   }
 
   function initMap() {
@@ -135,7 +207,7 @@
         navigator.geolocation.watchPosition(position => {
           const lat = position.coords.latitude;
           const lng = position.coords.longitude;
-          const speed = position.coords.speed;
+          const speed = position.coords.speed || 0;
           const heading = position.coords.heading;
           const alt = position.coords.altitude;
 
@@ -144,14 +216,19 @@
 
           document.getElementById("lat").textContent = masked.lat.toFixed(6);
           document.getElementById("lng").textContent = masked.lng.toFixed(6);
-
-          const kph = speed ? (speed * 3.6).toFixed(1) + " km/h" : "–";
-          const mph = speed ? (speed * 2.237).toFixed(1) + " mph" : "–";
-          document.getElementById("speed").textContent = speed ? `${kph} | ${mph}` : "–";
-
+          const kph = (speed * 3.6).toFixed(1);
+          const mph = (speed * 2.237).toFixed(1);
+          document.getElementById("speed").textContent = speed ? `${kph} km/h | ${mph} mph` : "–";
           document.getElementById("heading").textContent = heading ? heading.toFixed(1) + "°" : "–";
           document.getElementById("alt").textContent = alt ? alt.toFixed(1) + " m" : "–";
           document.getElementById("updated").textContent = new Date().toLocaleTimeString();
+
+          const iconUrl = getIconUrl(speed);
+          const icon = {
+            url: iconUrl,
+            scaledSize: new google.maps.Size(40, 40),
+            anchor: new google.maps.Point(20, 20)
+          };
 
           if (!map) {
             map = new google.maps.Map(document.getElementById("map"), {
@@ -162,6 +239,7 @@
             marker = new google.maps.Marker({
               position: myLocation,
               map: map,
+              icon: icon,
               title: "Tracking"
             });
             trailPath = new google.maps.Polyline({
@@ -172,32 +250,24 @@
               strokeWeight: 4,
               map: map
             });
-            map.addListener('dragstart', () => autoFollow = false);
+            map.addListener("dragstart", () => autoFollow = false);
           } else {
             marker.setPosition(myLocation);
+            marker.setIcon(icon);
             if (autoFollow) map.setCenter(myLocation);
             trailCoords.push(myLocation);
             trailPath.setPath(trailCoords);
           }
         }, () => {
-          document.getElementById("map").innerHTML = "<h2 style='text-align:center;margin-top:20vh;'>Jerome is probably in flight right now. GPS unavailable.</h2>";
-        }, {
-          enableHighAccuracy: true,
-          timeout: 10000
-        });
-      } else {
-        document.getElementById("map").innerHTML = "<h2 style='text-align:center;margin-top:20vh;'>Geolocation not supported by this browser.</h2>";
+          document.getElementById("map").innerHTML = "<h2 style='text-align:center;margin-top:20vh;'>Jerome is probably in flight. GPS unavailable.</h2>";
+        }, { enableHighAccuracy: true, timeout: 10000 });
       }
-
-      document.getElementById("recenter").addEventListener("click", () => {
-        autoFollow = true;
-        if (map && myLocation) {
-          map.setCenter(myLocation);
-        }
-      });
+    });
+    document.getElementById("recenter").addEventListener("click", () => {
+      autoFollow = true;
+      if (map && myLocation) map.setCenter(myLocation);
     });
   }
 </script>
-
 </body>
 </html>
