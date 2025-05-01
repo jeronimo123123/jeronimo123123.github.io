@@ -1,9 +1,9 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8"/>
+  <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Jerome's Secure Live Tracker</title>
+  <title>Jerome's Secure Tracker</title>
   <style>
     html, body {
       margin: 0;
@@ -56,7 +56,6 @@
   if (password !== "bonjour") {
     document.body.innerHTML = "<h2 style='text-align:center;margin-top:20vh;'>Access denied</h2>";
   } else {
-    // Everything inside this block runs ONLY if password is correct
     document.body.innerHTML += `
       <div id="map"></div>
       <button id="recenter">Track Me Again</button>
@@ -77,121 +76,6 @@
       </iframe>
     `;
 
-    const home = { lat: 52.8412289, lng: -1.3407503 };
-    const KM_RADIUS = 1;
-    let map, marker, myLocation, trailPath;
-    let trailCoords = [];
-    let autoFollow = true;
-
-    function toRad(deg) { return deg * Math.PI / 180; }
-
-    function distance(lat1, lng1, lat2, lng2) {
-      const R = 6371;
-      const dLat = toRad(lat2 - lat1);
-      const dLng = toRad(lng2 - lng1);
-      const a = Math.sin(dLat / 2) ** 2 +
-                Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
-                Math.sin(dLng / 2) ** 2;
-      return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    }
-
-    function maskLocation(lat, lng) {
-      const dist = distance(lat, lng, home.lat, home.lng);
-      if (dist <= KM_RADIUS) {
-        const offset = 0.01 * (Math.random() - 0.5);
-        return { lat: lat + offset, lng: lng + offset };
-      }
-      return { lat, lng };
-    }
-
-    function getSunriseSunset(callback) {
-      navigator.geolocation.getCurrentPosition(pos => {
-        fetch(`https://api.sunrise-sunset.org/json?lat=${pos.coords.latitude}&lng=${pos.coords.longitude}&formatted=0`)
-          .then(res => res.json())
-          .then(data => callback(data.results));
-      });
-    }
-
-    function isNight(sunrise, sunset) {
-      const now = new Date();
-      const sr = new Date(sunrise);
-      const ss = new Date(sunset);
-      return now < sr || now > ss;
-    }
-
-    function initMap() {
-      getSunriseSunset(times => {
-        const night = isNight(times.sunrise, times.sunset);
-        const mapType = night ? "satellite" : "roadmap";
-
-        if (navigator.geolocation) {
-          navigator.geolocation.watchPosition(position => {
-            const lat = position.coords.latitude;
-            const lng = position.coords.longitude;
-            const speed = position.coords.speed;
-            const heading = position.coords.heading;
-            const alt = position.coords.altitude;
-
-            const masked = maskLocation(lat, lng);
-            myLocation = { lat: masked.lat, lng: masked.lng };
-
-            document.getElementById("lat").textContent = masked.lat.toFixed(6);
-            document.getElementById("lng").textContent = masked.lng.toFixed(6);
-
-            const kph = speed ? (speed * 3.6).toFixed(1) + " km/h" : "–";
-            const mph = speed ? (speed * 2.237).toFixed(1) + " mph" : "–";
-            document.getElementById("speed").textContent = speed ? `${kph} | ${mph}` : "–";
-
-            document.getElementById("heading").textContent = heading ? heading.toFixed(1) + "°" : "–";
-            document.getElementById("alt").textContent = alt ? alt.toFixed(1) + " m" : "–";
-            document.getElementById("updated").textContent = new Date().toLocaleTimeString();
-
-            if (!map) {
-              map = new google.maps.Map(document.getElementById("map"), {
-                center: myLocation,
-                zoom: 15,
-                mapTypeId: mapType
-              });
-              marker = new google.maps.Marker({
-                position: myLocation,
-                map: map,
-                title: "Tracking"
-              });
-              trailPath = new google.maps.Polyline({
-                path: [],
-                geodesic: true,
-                strokeColor: "#00BFFF",
-                strokeOpacity: 0.8,
-                strokeWeight: 4,
-                map: map
-              });
-              map.addListener('dragstart', () => autoFollow = false);
-            } else {
-              marker.setPosition(myLocation);
-              if (autoFollow) map.setCenter(myLocation);
-              trailCoords.push(myLocation);
-              trailPath.setPath(trailCoords);
-            }
-          }, () => {
-            document.getElementById("map").innerHTML = "<h2 style='text-align:center;margin-top:20vh;'>Jerome is probably in flight right now. GPS unavailable.</h2>";
-          }, {
-            enableHighAccuracy: true,
-            timeout: 10000
-          });
-        } else {
-          document.getElementById("map").innerHTML = "<h2 style='text-align:center;margin-top:20vh;'>Geolocation not supported by this browser.</h2>";
-        }
-
-        document.getElementById("recenter").addEventListener("click", () => {
-          autoFollow = true;
-          if (map && myLocation) {
-            map.setCenter(myLocation);
-          }
-        });
-      });
-    }
-
-    // Load Google Maps script dynamically AFTER password is validated
     const script = document.createElement('script');
     script.src = "https://maps.googleapis.com/maps/api/js?key=AIzaSyC1BLMNigTLDbiUqq-McVmLRD5cdwd2fiM&callback=initMap";
     script.async = true;
@@ -199,6 +83,121 @@
   }
 </script>
 
+<script>
+  const home = { lat: 52.8412289, lng: -1.3407503 };
+  const KM_RADIUS = 1;
+  let map, marker, myLocation, trailPath;
+  let trailCoords = [];
+  let autoFollow = true;
+
+  function toRad(deg) { return deg * Math.PI / 180; }
+
+  function distance(lat1, lng1, lat2, lng2) {
+    const R = 6371;
+    const dLat = toRad(lat2 - lat1);
+    const dLng = toRad(lng2 - lng1);
+    const a = Math.sin(dLat / 2) ** 2 +
+              Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+              Math.sin(dLng / 2) ** 2;
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  }
+
+  function maskLocation(lat, lng) {
+    const dist = distance(lat, lng, home.lat, home.lng);
+    if (dist <= KM_RADIUS) {
+      const offset = 0.01 * (Math.random() - 0.5);
+      return { lat: lat + offset, lng: lng + offset };
+    }
+    return { lat, lng };
+  }
+
+  function getSunriseSunset(callback) {
+    navigator.geolocation.getCurrentPosition(pos => {
+      fetch(`https://api.sunrise-sunset.org/json?lat=${pos.coords.latitude}&lng=${pos.coords.longitude}&formatted=0`)
+        .then(res => res.json())
+        .then(data => callback(data.results));
+    });
+  }
+
+  function isNight(sunrise, sunset) {
+    const now = new Date();
+    const sr = new Date(sunrise);
+    const ss = new Date(sunset);
+    return now < sr || now > ss;
+  }
+
+  function initMap() {
+    getSunriseSunset(times => {
+      const night = isNight(times.sunrise, times.sunset);
+      const mapType = night ? "satellite" : "roadmap";
+
+      if (navigator.geolocation) {
+        navigator.geolocation.watchPosition(position => {
+          const lat = position.coords.latitude;
+          const lng = position.coords.longitude;
+          const speed = position.coords.speed;
+          const heading = position.coords.heading;
+          const alt = position.coords.altitude;
+
+          const masked = maskLocation(lat, lng);
+          myLocation = { lat: masked.lat, lng: masked.lng };
+
+          document.getElementById("lat").textContent = masked.lat.toFixed(6);
+          document.getElementById("lng").textContent = masked.lng.toFixed(6);
+
+          const kph = speed ? (speed * 3.6).toFixed(1) + " km/h" : "–";
+          const mph = speed ? (speed * 2.237).toFixed(1) + " mph" : "–";
+          document.getElementById("speed").textContent = speed ? `${kph} | ${mph}` : "–";
+
+          document.getElementById("heading").textContent = heading ? heading.toFixed(1) + "°" : "–";
+          document.getElementById("alt").textContent = alt ? alt.toFixed(1) + " m" : "–";
+          document.getElementById("updated").textContent = new Date().toLocaleTimeString();
+
+          if (!map) {
+            map = new google.maps.Map(document.getElementById("map"), {
+              center: myLocation,
+              zoom: 15,
+              mapTypeId: mapType
+            });
+            marker = new google.maps.Marker({
+              position: myLocation,
+              map: map,
+              title: "Tracking"
+            });
+            trailPath = new google.maps.Polyline({
+              path: [],
+              geodesic: true,
+              strokeColor: "#00BFFF",
+              strokeOpacity: 0.8,
+              strokeWeight: 4,
+              map: map
+            });
+            map.addListener('dragstart', () => autoFollow = false);
+          } else {
+            marker.setPosition(myLocation);
+            if (autoFollow) map.setCenter(myLocation);
+            trailCoords.push(myLocation);
+            trailPath.setPath(trailCoords);
+          }
+        }, () => {
+          document.getElementById("map").innerHTML = "<h2 style='text-align:center;margin-top:20vh;'>Jerome is probably in flight right now. GPS unavailable.</h2>";
+        }, {
+          enableHighAccuracy: true,
+          timeout: 10000
+        });
+      } else {
+        document.getElementById("map").innerHTML = "<h2 style='text-align:center;margin-top:20vh;'>Geolocation not supported by this browser.</h2>";
+      }
+
+      document.getElementById("recenter").addEventListener("click", () => {
+        autoFollow = true;
+        if (map && myLocation) {
+          map.setCenter(myLocation);
+        }
+      });
+    });
+  }
+</script>
+
 </body>
 </html>
-
