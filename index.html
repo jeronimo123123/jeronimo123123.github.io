@@ -1,9 +1,9 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Flight Tracker – Privacy Protected</title>
+  <title>Jerome's Live Tracker</title>
   <style>
     html, body {
       margin: 0;
@@ -11,20 +11,13 @@
       background: #000;
       color: #fff;
     }
-
-    #map {
-      height: 70vh;
-      width: 100%;
-    }
-
+    #map { height: 70vh; width: 100%; }
     #info {
       text-align: center;
       padding: 10px;
       background: #111;
     }
-
     .label { color: #aaa; }
-
     #recenter {
       position: absolute;
       top: 10px;
@@ -37,126 +30,177 @@
       border-radius: 6px;
       cursor: pointer;
     }
-
     iframe {
       width: 100%;
       height: 400px;
       border: none;
       margin-top: 10px;
     }
-
     .last-updated {
       margin-top: 10px;
       font-size: 0.9em;
       color: #888;
     }
+    .note {
+      font-size: 0.9em;
+      text-align: center;
+      padding: 10px;
+      color: #aaa;
+    }
   </style>
 </head>
 <body>
-  <div id="map"></div>
-  <button id="recenter">Track Me Again</button>
 
-  <div id="info">
-    <p><span class="label">Latitude:</span> <span id="lat">–</span></p>
-    <p><span class="label">Longitude:</span> <span id="lng">–</span></p>
-    <p><span class="label">Speed:</span> <span id="speed">–</span></p>
-    <p><span class="label">Heading:</span> <span id="heading">–</span></p>
-    <p><span class="label">Altitude:</span> <span id="alt">–</span></p>
-    <p class="last-updated">Last updated: <span id="updated">–</span></p>
-  </div>
+<script>
+  const password = prompt("Enter password to access the tracker:");
+  if (password !== "flysafe123") {
+    document.body.innerHTML = "<h2 style='text-align:center;margin-top:20vh;'>Access denied</h2>";
+    throw new Error("Access denied");
+  }
+</script>
 
-  <iframe
-    src="https://embed.windy.com/embed.html?lat=52.83&lon=-1.33&detailLat=52.83&detailLon=-1.33&width=650&height=450&zoom=6&level=surface&overlay=wind&product=ecmwf&menu=&message=true&marker=&calendar=now&pressure=true&type=map&location=coordinates&detail=true&metricWind=kt&metricTemp=%C2%B0C&radarRange=-1"
-    loading="lazy">
-  </iframe>
+<div id="map"></div>
+<button id="recenter">Track Me Again</button>
 
-  <script>
-    const home = { lat: 52.8412289, lng: -1.3407503 };
-    const KM_RADIUS = 1;
+<div id="info">
+  <p><span class="label">Latitude:</span> <span id="lat">–</span></p>
+  <p><span class="label">Longitude:</span> <span id="lng">–</span></p>
+  <p><span class="label">Speed:</span> <span id="speed">–</span></p>
+  <p><span class="label">Heading:</span> <span id="heading">–</span></p>
+  <p><span class="label">Altitude:</span> <span id="alt">–</span></p>
+  <p class="last-updated">Last updated: <span id="updated">–</span></p>
+</div>
 
-    let map, marker, myLocation;
+<div class="note">
+  Refer to my Roster section. You’ll be able to get the flight link via 24Flightradar.
+</div>
 
-    function toRadians(deg) {
-      return deg * Math.PI / 180;
+<iframe
+  src="https://embed.windy.com/embed.html?lat=52.83&lon=-1.33&detailLat=52.83&detailLon=-1.33&width=650&height=450&zoom=6&level=surface&overlay=wind&product=ecmwf&menu=&message=true&marker=&calendar=now&pressure=true&type=map&location=coordinates&detail=true&metricWind=kt&metricTemp=%C2%B0C&radarRange=-1"
+  loading="lazy">
+</iframe>
+
+<script>
+  const home = { lat: 52.8412289, lng: -1.3407503 };
+  const KM_RADIUS = 1;
+
+  let map, marker, myLocation, trailPath;
+  let trailCoords = [];
+  let autoFollow = true;
+
+  function toRad(deg) { return deg * Math.PI / 180; }
+
+  function distance(lat1, lng1, lat2, lng2) {
+    const R = 6371;
+    const dLat = toRad(lat2 - lat1);
+    const dLng = toRad(lng2 - lng1);
+    const a = Math.sin(dLat / 2) ** 2 +
+              Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+              Math.sin(dLng / 2) ** 2;
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  }
+
+  function maskLocation(lat, lng) {
+    const dist = distance(lat, lng, home.lat, home.lng);
+    if (dist <= KM_RADIUS) {
+      const offset = 0.01 * (Math.random() - 0.5);
+      return { lat: lat + offset, lng: lng + offset };
     }
+    return { lat, lng };
+  }
 
-    function distanceInKm(lat1, lng1, lat2, lng2) {
-      const R = 6371;
-      const dLat = toRadians(lat2 - lat1);
-      const dLng = toRadians(lng2 - lng1);
-      const a = Math.sin(dLat / 2) ** 2 +
-                Math.cos(toRadians(lat1)) * Math.cos(toRadians(lat2)) *
-                Math.sin(dLng / 2) ** 2;
-      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-      return R * c;
-    }
+  function getSunriseSunset(callback) {
+    navigator.geolocation.getCurrentPosition(pos => {
+      fetch(`https://api.sunrise-sunset.org/json?lat=${pos.coords.latitude}&lng=${pos.coords.longitude}&formatted=0`)
+        .then(res => res.json())
+        .then(data => callback(data.results));
+    });
+  }
 
-    function applyPrivacyMask(lat, lng) {
-      const distance = distanceInKm(lat, lng, home.lat, home.lng);
-      if (distance <= KM_RADIUS) {
-        const offset = 0.01 * (Math.random() - 0.5); // ~500m
-        return {
-          lat: lat + offset,
-          lng: lng + offset
-        };
-      }
-      return { lat, lng };
-    }
+  function isNight(sunrise, sunset) {
+    const now = new Date();
+    const sr = new Date(sunrise);
+    const ss = new Date(sunset);
+    return now < sr || now > ss;
+  }
 
-    function initMap() {
+  function initMap() {
+    getSunriseSunset(times => {
+      const night = isNight(times.sunrise, times.sunset);
+      const mapType = night ? "satellite" : "roadmap";
+
       if (navigator.geolocation) {
-        navigator.geolocation.watchPosition(updatePosition, showError, {
+        navigator.geolocation.watchPosition(position => {
+          const lat = position.coords.latitude;
+          const lng = position.coords.longitude;
+          const speed = position.coords.speed;
+          const heading = position.coords.heading;
+          const alt = position.coords.altitude;
+
+          const masked = maskLocation(lat, lng);
+          myLocation = { lat: masked.lat, lng: masked.lng };
+
+          document.getElementById("lat").textContent = masked.lat.toFixed(6);
+          document.getElementById("lng").textContent = masked.lng.toFixed(6);
+
+          const kph = speed ? (speed * 3.6).toFixed(1) + " km/h" : "–";
+          const mph = speed ? (speed * 2.237).toFixed(1) + " mph" : "–";
+          document.getElementById("speed").textContent = speed ? `${kph} | ${mph}` : "–";
+
+          document.getElementById("heading").textContent = heading ? heading.toFixed(1) + "°" : "–";
+          document.getElementById("alt").textContent = alt ? alt.toFixed(1) + " m" : "–";
+
+          document.getElementById("updated").textContent = new Date().toLocaleTimeString();
+
+          if (!map) {
+            map = new google.maps.Map(document.getElementById("map"), {
+              center: myLocation,
+              zoom: 15,
+              mapTypeId: mapType
+            });
+            marker = new google.maps.Marker({
+              position: myLocation,
+              map: map,
+              title: "Tracking"
+            });
+            trailPath = new google.maps.Polyline({
+              path: [],
+              geodesic: true,
+              strokeColor: "#00BFFF",
+              strokeOpacity: 0.8,
+              strokeWeight: 4,
+              map: map
+            });
+            map.addListener('dragstart', () => autoFollow = false);
+          } else {
+            marker.setPosition(myLocation);
+            if (autoFollow) map.setCenter(myLocation);
+            trailCoords.push(myLocation);
+            trailPath.setPath(trailCoords);
+          }
+        }, () => {
+          document.getElementById("map").innerHTML = "<h2 style='text-align:center;margin-top:20vh;'>Jerome is probably in flight right now. GPS unavailable.</h2>";
+        }, {
           enableHighAccuracy: true,
           timeout: 10000
         });
       } else {
-        alert("Geolocation not supported.");
+        document.getElementById("map").innerHTML = "<h2 style='text-align:center;margin-top:20vh;'>Geolocation not supported by this browser.</h2>";
       }
 
       document.getElementById("recenter").addEventListener("click", () => {
+        autoFollow = true;
         if (map && myLocation) {
           map.setCenter(myLocation);
         }
       });
-    }
+    });
+  }
+</script>
 
-    function updatePosition(position) {
-      const { latitude, longitude, speed, heading, altitude } = position.coords;
-      const masked = applyPrivacyMask(latitude, longitude);
+<script async
+  src="https://maps.googleapis.com/maps/api/js?key=AIzaSyC1BLMNigTLDbiUqq-McVmLRD5cdwd2fiM&callback=initMap">
+</script>
 
-      myLocation = { lat: masked.lat, lng: masked.lng };
-
-      document.getElementById("lat").textContent = masked.lat.toFixed(6);
-      document.getElementById("lng").textContent = masked.lng.toFixed(6);
-      document.getElementById("speed").textContent = speed ? speed.toFixed(1) + " m/s" : "–";
-      document.getElementById("heading").textContent = heading ? heading.toFixed(1) + "°" : "–";
-      document.getElementById("alt").textContent = altitude ? altitude.toFixed(1) + " m" : "–";
-
-      const now = new Date();
-      document.getElementById("updated").textContent = now.toLocaleTimeString();
-
-      if (!map) {
-        map = new google.maps.Map(document.getElementById("map"), {
-          center: myLocation,
-          zoom: 15
-        });
-        marker = new google.maps.Marker({
-          position: myLocation,
-          map: map,
-          title: "Tracking"
-        });
-      } else {
-        marker.setPosition(myLocation);
-      }
-    }
-
-    function showError(error) {
-      document.getElementById("map").innerHTML = "⚠️ " + error.message;
-    }
-  </script>
-
-  <script async
-    src="https://maps.googleapis.com/maps/api/js?key=AIzaSyC1BLMNigTLDbiUqq-McVmLRD5cdwd2fiM&callback=initMap">
-  </script>
 </body>
 </html>
