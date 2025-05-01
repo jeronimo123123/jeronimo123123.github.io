@@ -146,6 +146,38 @@
     document.body.appendChild(script);
   }
 </script>
+<script>
+  function initMap() {
+    if (!navigator.geolocation) {
+      document.getElementById("map").innerHTML = "<p style='text-align:center;color:red;'>Geolocation not supported.</p>";
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition((position) => {
+      const lat = position.coords.latitude;
+      const lng = position.coords.longitude;
+      const myLocation = { lat, lng };
+
+      const map = new google.maps.Map(document.getElementById("map"), {
+        center: myLocation,
+        zoom: 15,
+        mapTypeId: "roadmap"
+      });
+
+      new google.maps.Marker({
+        position: myLocation,
+        map: map,
+        title: "You're here!"
+      });
+
+      document.getElementById("lat").textContent = lat.toFixed(6);
+      document.getElementById("lng").textContent = lng.toFixed(6);
+      document.getElementById("updated").textContent = new Date().toLocaleTimeString();
+    }, (error) => {
+      document.getElementById("map").innerHTML = "<p style='text-align:center;color:red;'>Geolocation failed. Please allow location access.</p>";
+    });
+  }
+</script>
 
 </body>
 </html>
