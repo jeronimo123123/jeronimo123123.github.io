@@ -110,8 +110,8 @@
 <script>
   const correctPassword = "bonjour";
   document.getElementById("accessButton").addEventListener("click", () => {
-    const entered = document.getElementById("passwordInput").value;
-    if (entered === correctPassword) {
+    const entered = document.getElementById("passwordInput").value.trim();
+    if (entered.toLowerCase() === correctPassword) {
       document.getElementById("loginScreen").style.display = "none";
       loadTracker();
     } else {
