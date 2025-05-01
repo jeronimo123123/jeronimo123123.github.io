@@ -17,6 +17,155 @@
       background: #000;
       display: flex;
       flex-direction: column;
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Jerome's Secure Tracker</title>
+  <style>
+    html, body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #000;
+      color: #fff;
+    }
+    #loginScreen {
+      position: fixed;
+      inset: 0;
+      background: #000;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+    }
+    #loginBox {
+      text-align: center;
+      max-width: 300px;
+      width: 80%;
+    }
+    #loginBox h2 {
+      margin-bottom: 20px;
+      font-size: 1.5em;
+    }
+    #passwordInput {
+      padding: 10px;
+      font-size: 1em;
+      width: 100%;
+      border: none;
+      border-radius: 5px;
+      background: #111;
+      color: #fff;
+      text-align: center;
+      margin-bottom: 10px;
+    }
+    #accessButton {
+      padding: 10px;
+      width: 100%;
+      background: #007bff;
+      border: none;
+      border-radius: 5px;
+      color: #fff;
+      font-weight: bold;
+      font-size: 1em;
+      cursor: pointer;
+    }
+    #errorMsg {
+      margin-top: 10px;
+      color: #f33;
+      font-size: 0.9em;
+      display: none;
+    }
+    #map { height: 70vh; width: 100%; }
+    #info {
+      text-align: center;
+      padding: 10px;
+      background: #111;
+    }
+    .label { color: #aaa; }
+    #recenter {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      z-index: 5;
+      padding: 10px 15px;
+      background: #444;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    iframe {
+      width: 100%;
+      height: 400px;
+      border: none;
+      margin-top: 10px;
+    }
+    .last-updated {
+      margin-top: 10px;
+      font-size: 0.9em;
+      color: #888;
+    }
+    .note {
+      font-size: 0.9em;
+      text-align: center;
+      padding: 10px;
+      color: #aaa;
+    }
+  </style>
+</head>
+<body>
+<div id="loginScreen">
+  <div id="loginBox">
+    <h2>Jerome’s Live Tracker</h2>
+    <input type="password" id="passwordInput" placeholder="Enter password" />
+    <button id="accessButton">Access</button>
+    <div id="errorMsg">Access denied. Try again.</div>
+  </div>
+</div>
+<script>
+  const correctPassword = "bonjour";
+  document.getElementById("accessButton").addEventListener("click", () => {
+    const entered = document.getElementById("passwordInput").value;
+    if (entered === correctPassword) {
+      document.getElementById("loginScreen").style.display = "none";
+      loadTracker();
+    } else {
+      document.getElementById("errorMsg").style.display = "block";
+    }
+  });
+
+  function loadTracker() {
+    document.body.innerHTML += `
+      <div id="map"></div>
+      <button id="recenter">Track Me Again</button>
+      <div id="info">
+        <p><span class="label">Latitude:</span> <span id="lat">–</span></p>
+        <p><span class="label">Longitude:</span> <span id="lng">–</span></p>
+        <p><span class="label">Speed:</span> <span id="speed">–</span></p>
+        <p><span class="label">Heading:</span> <span id="heading">–</span></p>
+        <p><span class="label">Altitude:</span> <span id="alt">–</span></p>
+        <p class="last-updated">Last updated: <span id="updated">–</span></p>
+      </div>
+      <div class="note">
+        Refer to my Roster section. You’ll be able to get the flight link via 24Flightradar.
+      </div>
+      <iframe
+        src="https://embed.windy.com/embed.html?lat=52.83&lon=-1.33&detailLat=52.83&detailLon=-1.33&zoom=6&level=surface&overlay=wind&product=ecmwf"
+        loading="lazy">
+      </iframe>
+    `;
+
+    const script = document.createElement("script");
+    script.src = "https://maps.googleapis.com/maps/api/js?key=AIzaSyC1BLMNigTLDbiUqq-McVmLRD5cdwd2fiM&callback=initMap";
+    script.async = true;
+    document.body.appendChild(script);
+  }
+</script>
+</body>
+</html>
+
       align-items: center;
       justify-content: center;
       z-index: 9999;
